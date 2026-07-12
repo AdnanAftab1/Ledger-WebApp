@@ -9,11 +9,12 @@ export const hashPassword = async (password: string): Promise<string> => {
 }
 
 export const comparePassword = async (password: string, hashedPassword: string): Promise<boolean> => {
+  console.log("Comparing");
   return await bcrypt.compare(password, hashedPassword)
 }
 
 export const generateToken = (adminId: number, loginId: string): string => {
-  return jwt.sign({ adminId, loginId }, JWT_SECRET, { expiresIn: '8h' })
+  return jwt.sign({ adminId, loginId }, JWT_SECRET, { expiresIn: '4weeks' })
 }
 
 export const verifyToken = (token: string): jwt.JwtPayload | null => {
