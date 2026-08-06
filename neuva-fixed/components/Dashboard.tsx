@@ -19,6 +19,7 @@ export const Dashboard: React.FC = () => {
   const [filters, setFilters] = useState<{
     partyId?: number
     tillDate?: Date
+    transactionTypeId?: number  // Add this
   }>({})
   const [isFormOpen, setIsFormOpen] = useState(false)
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null)
@@ -86,10 +87,15 @@ export const Dashboard: React.FC = () => {
       {/* Filters */}
       <DashboardFilters
         parties={parties}
+        transactionTypes={transactionTypes}
         selectedPartyId={filters.partyId}
         selectedDate={filters.tillDate}
+        selectedTransactionTypeId={filters.transactionTypeId}
         onPartyChange={(partyId) => setFilters(prev => ({ ...prev, partyId }))}
         onDateChange={(date) => setFilters(prev => ({ ...prev, tillDate: date }))}
+        onTransactionTypeChange={(transactionTypeId) => 
+          setFilters(prev => ({ ...prev, transactionTypeId }))
+        }
       />
 
       {/* Transactions Table */}

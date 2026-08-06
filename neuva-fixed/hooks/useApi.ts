@@ -144,14 +144,18 @@ export const useDeleteTransactionType = () => {
 }
 
 // ---------- Transactions ----------
-
-export const useTransactions = (filters?: { partyId?: number; tillDate?: Date }) => {
+export const useTransactions = (filters?: { 
+  partyId?: number; 
+  tillDate?: Date;
+  transactionTypeId?: number;
+}) => {
   return useQuery<Transaction[]>({
     queryKey: ['transactions', filters],
     queryFn: async () => {
       const params: any = {}
       if (filters?.partyId) params.partyId = filters.partyId
       if (filters?.tillDate) params.tillDate = filters.tillDate.toISOString()
+      if (filters?.transactionTypeId) params.transactionTypeId = filters.transactionTypeId
 
       const { data } = await api.get('/transactions', { params })
       return data
