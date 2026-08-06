@@ -1,5 +1,8 @@
 {
-  "/page": "app/page.js",
   "/api/transactions/route": "app/api/transactions/route.js",
-  "/api/transactions/outstanding/total/route": "app/api/transactions/outstanding/total/route.js"
+  "/api/transactions/outstanding/total/route": "app/api/transactions/outstanding/total/route.js",
+  "/api/auth/me/route": "app/api/auth/me/route.js",
+  "/page": "app/page.js",
+  "/api/parties/route": "app/api/parties/route.js",
+  "/api/transaction-types/route": "app/api/transaction-types/route.js"
 }
