@@ -34,6 +34,43 @@ export const TransactionTable: React.FC<TransactionTableProps> = ({
     return type || { note: 'Unknown', type: 'unknown' as const }
   }
 
+  const downloadCSV = () => {
+    // Define CSV headers
+    const headers = ['#', 'Date', 'Party', 'Note', 'Type', 'Amount']
+    
+    // Create rows
+    const rows = transactions.map((transaction) => {
+      const typeInfo = getTypeInfo(transaction.typeId)
+      return [
+        getSerialDisplay(transaction.serialNumber),
+        formatDate(transaction.date),
+        getPartyName(transaction.partyId),
+        transaction.transactionNote || '-',
+        typeInfo.note,
+        transaction.amount
+      ]
+    })
+
+    // Combine headers and rows
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(row => row.join(','))
+    ].join('\n')
+
+    // Create and download the file
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+    const link = document.createElement('a')
+    const url = URL.createObjectURL(blob)
+    
+    link.setAttribute('href', url)
+    link.setAttribute('download', `transactions_${new Date().toISOString().split('T')[0]}.csv`)
+    link.style.visibility = 'hidden'
+    
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+  }
+
   if (loading) {
     return (
       <div className="table-container">
@@ -61,6 +98,22 @@ export const TransactionTable: React.FC<TransactionTableProps> = ({
   return (
     <>
       <div className="table-container">
+        <div className="flex justify-between items-center mb-4">
+          <div className="text-sm text-gray-500">
+            Showing {transactions.length} transaction{transactions.length !== 1 ? 's' : ''}
+          </div>
+          <Button 
+            variant="outline" 
+            size="sm"
+            onClick={downloadCSV}
+            className="flex items-center gap-2"
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+            </svg>
+            Download CSV
+          </Button>
+        </div>
         <table className="table">
           <thead className="table-header">
             <tr>

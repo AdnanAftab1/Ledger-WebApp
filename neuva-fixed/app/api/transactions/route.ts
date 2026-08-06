@@ -7,17 +7,33 @@ export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams
     const partyId = searchParams.get('partyId')
     const tillDate = searchParams.get('tillDate')
+    const transactionTypeId = searchParams.get('transactionTypeId') // Add this
+    
     const where: any = {}
+    
     if (partyId) where.partyId = parseInt(partyId)
     if (tillDate) where.date = { lte: new Date(tillDate) }
+    if (transactionTypeId) where.typeId = parseInt(transactionTypeId) // Add this
+
+    console.log("Hello")
+    console.log(where)
+
+    
     const transactions = await prisma.transaction.findMany({
       where,
-      include: { party: true, transactionType: true },
+      include: { 
+        party: true, 
+        transactionType: true 
+      },
       orderBy: { date: 'desc' },
     })
+    
     return NextResponse.json(transactions)
   } catch (error: any) {
-    return NextResponse.json({ error: error.message || 'Failed to fetch transactions' }, { status: 500 })
+    return NextResponse.json(
+      { error: error.message || 'Failed to fetch transactions' }, 
+      { status: 500 }
+    )
   }
 }
 

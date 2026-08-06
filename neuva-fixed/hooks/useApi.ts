@@ -156,7 +156,8 @@ export const useTransactions = (filters?: {
       if (filters?.partyId) params.partyId = filters.partyId
       if (filters?.tillDate) params.tillDate = filters.tillDate.toISOString()
       if (filters?.transactionTypeId) params.transactionTypeId = filters.transactionTypeId
-
+      
+      console.log(params)
       const { data } = await api.get('/transactions', { params })
       return data
     },
