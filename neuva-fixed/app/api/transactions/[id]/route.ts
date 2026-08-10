@@ -6,7 +6,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
   try {
     const id = parseInt(params.id)
     const transaction = await prisma.transaction.findUnique({
-      where: { id },
+      where: { id },      
       include: { party: true, transactionType: true },
     })
     if (!transaction) return NextResponse.json({ error: 'Transaction not found' }, { status: 404 })
