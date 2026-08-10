@@ -35,7 +35,7 @@ export const TransactionTable: React.FC<TransactionTableProps> = ({
   }
 
   const downloadCSV = () => {
-    // Define CSV headers
+    // Define CSV headers ...
     const headers = ['#', 'Date', 'Party', 'Note', 'Type', 'Amount']
     
     // Create rows
