@@ -36,7 +36,7 @@ export const Dashboard: React.FC = () => {
 
   useEffect(() => {
     const handleShortcut = (event: KeyboardEvent) => {
-      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'n') {
+      if ((event.shiftKey || event.metaKey) && event.key.toLowerCase() === 'n') {
         event.preventDefault()
         setEditingTransaction(null)
         setIsFormOpen(true)
