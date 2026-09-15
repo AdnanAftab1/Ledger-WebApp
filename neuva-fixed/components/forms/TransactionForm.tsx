@@ -1,5 +1,5 @@
 'use client'
-import React, { useEffect } from 'react'
+import React, { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { TransactionSchema, TransactionInput } from '@/utils/validation'
@@ -12,6 +12,8 @@ import 'react-datepicker/dist/react-datepicker.css'
 
 interface TransactionFormProps {
   initialData?: Transaction | null
+  defaultPartyId?: number
+  defaultDate?: Date
   parties: Party[]
   transactionTypes: TransactionType[]
   onSubmit: (data: TransactionInput & { date: Date }) => void
@@ -21,12 +23,15 @@ interface TransactionFormProps {
 
 export const TransactionForm: React.FC<TransactionFormProps> = ({
   initialData,
+  defaultPartyId,
+  defaultDate,
   parties,
   transactionTypes,
   onSubmit,
   onCancel,
   loading = false,
 }) => {
+  const [partyOrder, setPartyOrder] = useState<number[]>([])
   const {
     register,
     handleSubmit,
@@ -36,12 +41,29 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
   } = useForm<TransactionInput>({
     resolver: zodResolver(TransactionSchema),
     defaultValues: {
-      date: initialData ? new Date(initialData.date) : new Date(),
-      partyId: initialData?.partyId || undefined,
+      date: initialData ? new Date(initialData.date) : defaultDate || new Date(),
+      partyId: initialData?.partyId || defaultPartyId || undefined,
       transactionNote: initialData?.transactionNote || '',
       typeId: initialData?.typeId || undefined,
       amount: initialData?.amount || undefined,
     },
+  })
+
+  useEffect(() => {
+    try {
+      const savedOrder = window.localStorage.getItem('ledger-party-order')
+      const parsedOrder = savedOrder ? JSON.parse(savedOrder) : []
+      setPartyOrder(Array.isArray(parsedOrder) ? parsedOrder : [])
+    } catch {
+      setPartyOrder([])
+    }
+  }, [parties])
+
+  const orderedParties = [...parties].sort((first, second) => {
+    const firstIndex = partyOrder.indexOf(first.id)
+    const secondIndex = partyOrder.indexOf(second.id)
+    return (firstIndex === -1 ? parties.length : firstIndex) -
+      (secondIndex === -1 ? parties.length : secondIndex)
   })
 
   const selectedTypeIdValue = watch('typeId')
@@ -57,6 +79,21 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedTypeIdValue])
+
+  useEffect(() => {
+    const handleShortcut = (event: KeyboardEvent) => {
+      if (event.altKey && event.key === 'ArrowDown') {
+        event.preventDefault()
+        const currentPartyId = watch('partyId')
+        const currentIndex = orderedParties.findIndex(party => party.id === currentPartyId)
+        const nextParty = orderedParties[(currentIndex + 1) % orderedParties.length]
+        if (nextParty) setValue('partyId', nextParty.id, { shouldValidate: true })
+      }
+    }
+
+    window.addEventListener('keydown', handleShortcut)
+    return () => window.removeEventListener('keydown', handleShortcut)
+  }, [orderedParties, setValue, watch])
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
@@ -82,7 +119,7 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
           className="form-input"
         >
           <option value="">Select a party</option>
-          {parties.map((party) => (
+          {orderedParties.map((party) => (
             <option key={party.id} value={party.id}>
               {party.name}
             </option>

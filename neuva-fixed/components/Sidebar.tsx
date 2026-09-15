@@ -1,5 +1,5 @@
 'use client'
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import {
   useParties,
   useTransactionTypes,
@@ -33,6 +33,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const [editingType, setEditingType] = useState<TransactionType | null>(null)
   const [partySearch, setPartySearch] = useState('')
   const [typeSearch, setTypeSearch] = useState('')
+  const [partyOrder, setPartyOrder] = useState<number[]>([])
+  const [partyOrderLoaded, setPartyOrderLoaded] = useState(false)
+  const [draggedPartyId, setDraggedPartyId] = useState<number | null>(null)
 
   const { data: parties = [] } = useParties()
   const { data: transactionTypes = [] } = useTransactionTypes()
@@ -42,7 +45,45 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const createType = useCreateTransactionType()
   const updateType = useUpdateTransactionType()
 
-  const filteredParties = parties.filter(p =>
+  useEffect(() => {
+    try {
+      const savedOrder = window.localStorage.getItem('ledger-party-order')
+      const parsedOrder = savedOrder ? JSON.parse(savedOrder) : []
+      setPartyOrder(Array.isArray(parsedOrder) ? parsedOrder : [])
+    } catch {
+      setPartyOrder([])
+    } finally {
+      setPartyOrderLoaded(true)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!partyOrderLoaded) return
+
+    setPartyOrder(currentOrder => {
+      const partyIds = new Set(parties.map(party => party.id))
+      const savedIds = currentOrder.filter(id => partyIds.has(id))
+      const newIds = parties
+        .map(party => party.id)
+        .filter(id => !savedIds.includes(id))
+      return [...savedIds, ...newIds]
+    })
+  }, [parties, partyOrderLoaded])
+
+  useEffect(() => {
+    if (partyOrderLoaded) {
+      window.localStorage.setItem('ledger-party-order', JSON.stringify(partyOrder))
+    }
+  }, [partyOrder, partyOrderLoaded])
+
+  const orderedParties = [...parties].sort((first, second) => {
+    const firstIndex = partyOrder.indexOf(first.id)
+    const secondIndex = partyOrder.indexOf(second.id)
+    return (firstIndex === -1 ? parties.length : firstIndex) -
+      (secondIndex === -1 ? parties.length : secondIndex)
+  })
+
+  const filteredParties = orderedParties.filter(p =>
     p.name.toLowerCase().includes(partySearch.toLowerCase())
   )
   const filteredTypes = transactionTypes.filter(t =>
@@ -60,10 +101,16 @@ export const Sidebar: React.FC<SidebarProps> = ({
   }
 
   const handlePartySubmit = (data: { name: string; billingName?: string | null; location?: string | null }) => {
+    const partyData = {
+      name: data.name,
+      billingName: data.billingName ?? undefined,
+      location: data.location ?? undefined,
+    }
+
     if (editingParty) {
-      updateParty.mutate({ id: editingParty.id, ...data }, { onSuccess: closePartyForm })
+      updateParty.mutate({ id: editingParty.id, ...partyData }, { onSuccess: closePartyForm })
     } else {
-      createParty.mutate(data, { onSuccess: closePartyForm })
+      createParty.mutate(partyData, { onSuccess: closePartyForm })
     }
   }
 
@@ -73,6 +120,24 @@ export const Sidebar: React.FC<SidebarProps> = ({
     } else {
       createType.mutate(data, { onSuccess: closeTypeForm })
     }
+  }
+
+  const movePartyBefore = (partyId: number, targetPartyId: number) => {
+    if (partyId === targetPartyId) return
+
+    setPartyOrder(currentOrder => {
+      const nextOrder = currentOrder.length
+        ? [...currentOrder]
+        : parties.map(party => party.id)
+      const draggedIndex = nextOrder.indexOf(partyId)
+      const targetIndex = nextOrder.indexOf(targetPartyId)
+
+      if (draggedIndex === -1 || targetIndex === -1) return nextOrder
+
+      nextOrder.splice(draggedIndex, 1)
+      nextOrder.splice(nextOrder.indexOf(targetPartyId), 0, partyId)
+      return nextOrder
+    })
   }
 
   return (
@@ -114,15 +179,17 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 <div>
                   <div className="flex items-center justify-between mb-2">
                     <h2 className="text-sm font-semibold text-gray-600">Parties</h2>
-                    <button
-                      onClick={() => {
-                        setEditingParty(null)
-                        setShowPartyForm(true)
-                      }}
-                      className="text-primary-600 hover:text-primary-700 text-sm font-medium"
-                    >
-                      + Add
-                    </button>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => {
+                          setEditingParty(null)
+                          setShowPartyForm(true)
+                        }}
+                        className="text-primary-600 hover:text-primary-700 text-sm font-medium"
+                      >
+                        + Add
+                      </button>
+                    </div>
                   </div>
                   <div className="relative">
                     <input
@@ -135,16 +202,33 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   </div>
                   <div className="mt-2 space-y-1 max-h-40 overflow-y-auto scrollbar-thin">
                     {filteredParties.slice(0, 10).map((party) => (
-                      <button
+                      <div
                         key={party.id}
-                        onClick={() => {
-                          setEditingParty(party)
-                          setShowPartyForm(true)
+                        draggable
+                        onDragStart={() => setDraggedPartyId(party.id)}
+                        onDragEnd={() => setDraggedPartyId(null)}
+                        onDragOver={(event) => event.preventDefault()}
+                        onDrop={() => {
+                          if (draggedPartyId !== null) {
+                            movePartyBefore(draggedPartyId, party.id)
+                          }
+                          setDraggedPartyId(null)
                         }}
-                        className="w-full text-left px-2 py-1 text-sm hover:bg-gray-100 rounded transition-colors"
+                        className={`flex items-center gap-1 rounded ${
+                          draggedPartyId === party.id ? 'opacity-40' : ''
+                        }`}
+                        title="Drag to reorder"
                       >
-                        {party.name}
-                      </button>
+                        <button
+                          onClick={() => {
+                            setEditingParty(party)
+                            setShowPartyForm(true)
+                          }}
+                          className="min-w-0 flex-1 text-left px-2 py-1 text-sm hover:bg-gray-100 rounded transition-colors truncate"
+                        >
+                          {party.name}
+                        </button>
+                      </div>
                     ))}
                   </div>
                 </div>

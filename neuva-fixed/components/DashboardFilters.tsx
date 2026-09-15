@@ -125,7 +125,7 @@ export const DashboardFilters: React.FC<DashboardFiltersProps> = ({
         <label className="form-label">Till Date</label>
         <DatePicker
           selected={selectedDate}
-          onChange={onDateChange}
+          onChange={(date) => onDateChange(date || undefined)}
           dateFormat="dd/MM/yyyy"
           className="form-input"
           placeholderText="Select date"

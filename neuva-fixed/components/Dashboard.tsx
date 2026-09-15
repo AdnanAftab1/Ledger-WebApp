@@ -1,5 +1,5 @@
 'use client'
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import {
   useParties,
   useTransactionTypes,
@@ -13,7 +13,8 @@ import { DashboardFilters } from './DashboardFilters'
 import { TransactionTable } from './TransactionTable'
 import { DropdownCard } from './ui/DropdownCard'
 import { TransactionForm } from './forms/TransactionForm'
-import { Transaction, TransactionInput } from '@/types'
+import { Transaction } from '@/types'
+import { TransactionInput } from '@/utils/validation'
 
 export const Dashboard: React.FC = () => {
   const [filters, setFilters] = useState<{
@@ -33,6 +34,21 @@ export const Dashboard: React.FC = () => {
   const createMutation = useCreateTransaction()
   const updateMutation = useUpdateTransaction()
 
+  useEffect(() => {
+    const handleShortcut = (event: KeyboardEvent) => {
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'n') {
+        event.preventDefault()
+        setEditingTransaction(null)
+        setIsFormOpen(true)
+      } else if (event.key === 'Escape' && isFormOpen) {
+        handleCloseForm()
+      }
+    }
+
+    window.addEventListener('keydown', handleShortcut)
+    return () => window.removeEventListener('keydown', handleShortcut)
+  }, [isFormOpen])
+
   const handleDelete = (id: number) => {
     deleteMutation.mutate(id)
   }
@@ -50,7 +66,7 @@ export const Dashboard: React.FC = () => {
   const handleSubmit = (data: TransactionInput & { date: Date }) => {
     if (editingTransaction) {
       updateMutation.mutate(
-        { id: editingTransaction.id, ...data },
+        { id: editingTransaction.id, ...data, transactionNote: data.transactionNote ?? undefined },
         {
           onSuccess: () => {
             setLastTransactionDate(data.date)
@@ -59,12 +75,15 @@ export const Dashboard: React.FC = () => {
         }
       )
     } else {
-      createMutation.mutate(data, {
+      createMutation.mutate(
+        { ...data, transactionNote: data.transactionNote ?? undefined },
+        {
         onSuccess: () => {
           setLastTransactionDate(data.date)
           handleCloseForm()
         },
-      })
+        }
+      )
     }
   }
 
@@ -82,8 +101,12 @@ export const Dashboard: React.FC = () => {
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
         <button
-          onClick={() => setIsFormOpen(true)}
+          onClick={() => {
+            setEditingTransaction(null)
+            setIsFormOpen(true)
+          }}
           className="btn btn-primary"
+          aria-keyshortcuts="Control+N Meta+N"
         >
           <svg className="w-5 h-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
